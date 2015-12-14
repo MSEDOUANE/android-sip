@@ -1,0 +1,34 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 23
+    buildToolsVersion "23.0.2"
+
+    defaultConfig {
+        applicationId "pl.sipteam.android_sip"
+        minSdkVersion 15
+        targetSdkVersion 23
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+        }
+
+        debug {
+            debuggable true
+        }
+    }
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    testCompile ("junit:junit:$jUnitVersion")
+    compile ("com.android.support:appcompat-v7:$supportVersion")
+    compile ("com.android.support:design:$supportVersion")
+    compile ("de.greenrobot:eventbus:$eventBusVersion")
+    compile ("com.jakewharton:butterknife:$butterKnifeVersion")
+    compile files('libs/android-jain-sip-ri-1.2.258.jar')
+}
