@@ -26,6 +26,7 @@ android {
 dependencies {
     testCompile ("junit:junit:$jUnitVersion")
     compile ("com.android.support:appcompat-v7:$supportVersion")
+    compile ("com.android.support:recyclerview-v7:$supportVersion")
     compile ("com.android.support:design:$supportVersion")
 
     compile ("de.greenrobot:eventbus:$eventBusVersion")
@@ -33,4 +34,8 @@ dependencies {
 
     compile ("com.jakewharton:butterknife:$butterKnifeVersion")
     compile ("javax.sip:android-jain-sip-ri:$jainSipVersion")
+
+    compile ("net.danlew:android.joda:$jodaTimeVersion")
+
+    compile ("com.github.curioustechizen.android-ago:library:$androidAgoVersion")
 }

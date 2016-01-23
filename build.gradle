@@ -24,6 +24,8 @@ allprojects {
         eventBusVersion         =   '3.0.0-beta1'
         butterKnifeVersion      =   '7.0.1'
         jainSipVersion          =   '1.2.259'
+        jodaTimeVersion         =   '2.9.1'
+        androidAgoVersion       =   '1.3.0'
     }
 }
 

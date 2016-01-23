@@ -21,7 +21,7 @@
             app:popupTheme="@style/AppTheme.PopupOverlay" />
 
     </android.support.design.widget.AppBarLayout>
-
+	
     <include layout="@layout/content_main" />
 
     <android.support.design.widget.FloatingActionButton
@@ -31,6 +31,6 @@
         android:layout_gravity="bottom|end"
         android:layout_margin="@dimen/fab_margin"
         app:backgroundTint="@color/green"
-        android:src="@android:drawable/ic_menu_call" />
+        android:src="@android:drawable/ic_menu_send" />
 
 </android.support.design.widget.CoordinatorLayout>

@@ -1,21 +1,31 @@
 package pl.sipteam.android_sip;
 
+import android.content.Context;
 import android.javax.sip.InvalidArgumentException;
 import android.javax.sip.ObjectInUseException;
 import android.javax.sip.PeerUnavailableException;
 import android.javax.sip.TransportNotSupportedException;
+import android.media.MediaPlayer;
+import android.net.ConnectivityManager;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.TextInputLayout;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.DefaultItemAnimator;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.TooManyListenersException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -26,9 +36,12 @@ import butterknife.OnClick;
 import de.greenrobot.event.EventBus;
 import de.greenrobot.event.Subscribe;
 import de.greenrobot.event.ThreadMode;
+import pl.sipteam.android_sip.adapter.MessageListAdapter;
 import pl.sipteam.android_sip.event.SipErrorEvent;
 import pl.sipteam.android_sip.event.SipMessageEvent;
 import pl.sipteam.android_sip.event.SipStatusEvent;
+import pl.sipteam.android_sip.model.SipMessageItem;
+import pl.sipteam.android_sip.model.SipMessageType;
 import pl.sipteam.android_sip.runnable.SendMessageRunnable;
 import pl.sipteam.android_sip.sip.SipManager;
 
@@ -44,17 +57,29 @@ public class MainActivity extends AppCompatActivity {
     @Bind(R.id.input_layout_address)
     TextInputLayout inputLayoutAddress;
 
+    @Bind(R.id.input_layout_message)
+    TextInputLayout inputLayoutMessage;
+
+    @Bind(R.id.input_message)
+    EditText inputMessage;
+
     @Bind(R.id.input_address)
     EditText inputAddress;
 
-    @Bind(R.id.history_list)
-    RecyclerView historyList;
+    @Bind(R.id.messages_list)
+    RecyclerView messagesList;
+
+    private MessageListAdapter adapter;
 
     private EventBus bus;
 
     private SipManager sipManager;
 
     private ExecutorService executor;
+
+    private List<SipMessageItem> messages;
+
+    private MediaPlayer mediaPlayer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,11 +88,12 @@ public class MainActivity extends AppCompatActivity {
         ButterKnife.bind(this);
         setSupportActionBar(toolbar);
         bus = EventBus.getDefault();
-        bus.register(this);
+        mediaPlayer = MediaPlayer.create(this, R.raw.message_sound);
+                bus.register(this);
         executor = Executors.newFixedThreadPool(1);
 
         try {
-            sipManager = SipManager.getInstance("norbert", 5060);
+            sipManager = SipManager.getInstance("ja", 5060);
         } catch (PeerUnavailableException e) {
             e.printStackTrace();
         } catch (TransportNotSupportedException e) {
@@ -79,23 +105,85 @@ public class MainActivity extends AppCompatActivity {
         } catch (TooManyListenersException e) {
             e.printStackTrace();
         }
+
+        messages = new ArrayList<>();
+        initializeMessagesList();
+    }
+
+    private void initializeMessagesList() {
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
+        linearLayoutManager.setStackFromEnd(true);
+        messagesList.setHasFixedSize(false);
+        messagesList.setLayoutManager(linearLayoutManager);
+        messagesList.setItemAnimator(new DefaultItemAnimator());
+        adapter = new MessageListAdapter(messages);
+        messagesList.setAdapter(adapter);
     }
 
     @OnClick(R.id.action_button)
     public void onActionButtonClick() {
-        //TODO call to selected sip address/hang up conection
+        clearErrors();
+        if (isOnline()) {
+            if (validateFields()) {
+                sendMessage();
+                inputMessage.setText("");
+            }
+        } else {
+            Toast.makeText(this, getString(R.string.no_internet), Toast.LENGTH_SHORT).show();
+        }
+
+    }
+
+    private void sendMessage() {
         Runnable runnable = new SendMessageRunnable(
                 sipManager,
                 inputAddress.getText().toString(),
-                "test message"
+                inputMessage.getText().toString()
         );
         executor.execute(runnable);
     }
 
+    private boolean validateFields() {
+        if (TextUtils.isEmpty(inputMessage.getText().toString())){
+            inputLayoutMessage.setErrorEnabled(true);
+            inputMessage.requestFocus();
+            return false;
+        }
+
+        if (TextUtils.isEmpty(inputAddress.getText().toString())) {
+            inputLayoutAddress.setErrorEnabled(true);
+            inputAddress.requestFocus();
+            return false;
+        }
+
+        return true;
+    }
+
+    private void clearErrors() {
+        hideKeyboard();
+        inputLayoutAddress.setErrorEnabled(false);
+        inputLayoutMessage.setErrorEnabled(false);
+    }
+
+    private void hideKeyboard() {
+        View view = this.getCurrentFocus();
+        if (view != null) {
+            InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        }
+    }
+
     @Subscribe(threadMode = ThreadMode.MainThread)
     public void onEventMainThread(SipMessageEvent event) {
-        Log.d(TAG, event.getFrom() + " | " + event.getMessage());
-        Toast.makeText(this, event.getMessage(), Toast.LENGTH_LONG).show();
+        messages.add(event.getMessageItem());
+        adapter.notifyItemInserted(messages.size() - 1);
+
+        if (event.getMessageType() == SipMessageType.INCOMING_MESSAGE) {
+            mediaPlayer.start();
+            Toast.makeText(this, getString(R.string.new_message), Toast.LENGTH_SHORT).show();
+        } else if (event.getMessageType() == SipMessageType.OUTCOMING_MESSAGE) {
+            Toast.makeText(this, getString(R.string.message_sent), Toast.LENGTH_SHORT).show();
+        }
     }
 
     @Subscribe(threadMode = ThreadMode.MainThread)
@@ -129,5 +217,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         bus.unregister(this);
         super.onDestroy();
+    }
+
+    public boolean isOnline() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        return cm.getActiveNetworkInfo() != null && cm.getActiveNetworkInfo().isConnectedOrConnecting();
     }
 }

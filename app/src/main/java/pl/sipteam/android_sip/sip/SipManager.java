@@ -33,6 +33,8 @@ import android.javax.sip.message.MessageFactory;
 import android.javax.sip.message.Request;
 import android.javax.sip.message.Response;
 
+import org.joda.time.DateTime;
+
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.text.ParseException;
@@ -46,6 +48,8 @@ import de.greenrobot.event.EventBus;
 import pl.sipteam.android_sip.event.SipErrorEvent;
 import pl.sipteam.android_sip.event.SipMessageEvent;
 import pl.sipteam.android_sip.event.SipStatusEvent;
+import pl.sipteam.android_sip.model.SipMessageItem;
+import pl.sipteam.android_sip.model.SipMessageType;
 import pl.sipteam.android_sip.utils.CustomLogger;
 
 public class SipManager implements SipListener {
@@ -126,43 +130,56 @@ public class SipManager implements SipListener {
         FromHeader fromHeader = headerFactory.createFromHeader(fromNameAddress,
                 "textclientv1.0");
 
-        String username = to.substring(to.indexOf(":") + 1, to.indexOf("@"));
-        String address = to.substring(to.indexOf("@") + 1);
+        try {
+            String username = to.substring(to.indexOf(":") + 1, to.indexOf("@"));
+            String address = to.substring(to.indexOf("@") + 1);
 
-        SipURI toAddress = addressFactory.createSipURI(username, address);
-        Address toNameAddress = addressFactory.createAddress(toAddress);
-        toNameAddress.setDisplayName(username);
-        ToHeader toHeader = headerFactory.createToHeader(toNameAddress, null);
+            SipURI toAddress = addressFactory.createSipURI(username, address);
+            Address toNameAddress = addressFactory.createAddress(toAddress);
+            toNameAddress.setDisplayName(username);
+            ToHeader toHeader = headerFactory.createToHeader(toNameAddress, null);
 
-        SipURI requestURI = addressFactory.createSipURI(username, address);
-        requestURI.setTransportParam("udp");
+            SipURI requestURI = addressFactory.createSipURI(username, address);
+            requestURI.setTransportParam("udp");
 
-        ArrayList viaHeaders = new ArrayList();
-        ViaHeader viaHeader = headerFactory.createViaHeader(getHost(),
-                getPort(), "udp", "branch1");
-        viaHeaders.add(viaHeader);
+            ArrayList viaHeaders = new ArrayList();
+            ViaHeader viaHeader = headerFactory.createViaHeader(getHost(),
+                    getPort(), "udp", "branch1");
+            viaHeaders.add(viaHeader);
 
-        CallIdHeader callIdHeader = sipProvider.getNewCallId();
+            CallIdHeader callIdHeader = sipProvider.getNewCallId();
 
-        CSeqHeader cSeqHeader = headerFactory.createCSeqHeader(1L, Request.MESSAGE);
+            CSeqHeader cSeqHeader = headerFactory.createCSeqHeader(1L, Request.MESSAGE);
 
-        MaxForwardsHeader maxForwards = headerFactory.createMaxForwardsHeader(70);
+            MaxForwardsHeader maxForwards = headerFactory.createMaxForwardsHeader(70);
 
-        Request request = messageFactory.createRequest(requestURI,
-                Request.MESSAGE, callIdHeader, cSeqHeader, fromHeader,
-                toHeader, viaHeaders, maxForwards);
+            Request request = messageFactory.createRequest(requestURI,
+                    Request.MESSAGE, callIdHeader, cSeqHeader, fromHeader,
+                    toHeader, viaHeaders, maxForwards);
 
-        SipURI contactURI = addressFactory.createSipURI(getUsername(), getHost());
-        contactURI.setPort(getPort());
-        Address contactAddress = addressFactory.createAddress(contactURI);
-        contactAddress.setDisplayName(getUsername());
-        ContactHeader contactHeader = headerFactory.createContactHeader(contactAddress);
-        request.addHeader(contactHeader);
+            SipURI contactURI = addressFactory.createSipURI(getUsername(), getHost());
+            contactURI.setPort(getPort());
+            Address contactAddress = addressFactory.createAddress(contactURI);
+            contactAddress.setDisplayName(getUsername());
+            ContactHeader contactHeader = headerFactory.createContactHeader(contactAddress);
+            request.addHeader(contactHeader);
 
-        ContentTypeHeader contentTypeHeader = headerFactory.createContentTypeHeader("text", "plain");
-        request.setContent(message, contentTypeHeader);
+            ContentTypeHeader contentTypeHeader = headerFactory.createContentTypeHeader("text", "plain");
+            request.setContent(message, contentTypeHeader);
 
-        sipProvider.sendRequest(request);
+            sipProvider.sendRequest(request);
+            SipMessageItem messageItem = new SipMessageItem(getUsername(), message, new DateTime());
+            bus.post(new SipMessageEvent(messageItem, SipMessageType.OUTCOMING_MESSAGE));
+        } catch (Exception e) {
+            String err;
+            if (e instanceof IndexOutOfBoundsException) {
+                err = "Wrong address";
+            } else {
+                err = e.getMessage();
+            }
+            bus.post(new SipErrorEvent(err));
+        }
+
     }
 
     /** This method is called by the SIP stack when a response arrives. */
@@ -191,7 +208,12 @@ public class SipManager implements SipListener {
         }
 
         FromHeader from = (FromHeader) req.getHeader("From");
-        bus.post(new SipMessageEvent(from.getAddress().toString(), new String(req.getRawContent())));
+        SipMessageItem messageItem = new SipMessageItem(
+                from.getAddress().toString(),
+                new String(req.getRawContent()),
+                new DateTime()
+        );
+        bus.post(new SipMessageEvent(messageItem, SipMessageType.INCOMING_MESSAGE));
         Response response = null;
         try { //Reply with OK
             response = messageFactory.createResponse(200, req);
