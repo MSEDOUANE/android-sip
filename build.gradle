@@ -21,8 +21,9 @@ allprojects {
     ext {
         supportVersion          =   '23.1.1'
         jUnitVersion            =   '4.12'
-        eventBusVersion         =   '2.4.0'
+        eventBusVersion         =   '3.0.0-beta1'
         butterKnifeVersion      =   '7.0.1'
+        jainSipVersion          =   '1.2.259'
     }
 }
 
