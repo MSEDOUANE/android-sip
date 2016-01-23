@@ -24,11 +24,13 @@ android {
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
     testCompile ("junit:junit:$jUnitVersion")
     compile ("com.android.support:appcompat-v7:$supportVersion")
     compile ("com.android.support:design:$supportVersion")
+
     compile ("de.greenrobot:eventbus:$eventBusVersion")
+    provided ("de.greenrobot:eventbus-annotation-processor:$eventBusVersion")
+
     compile ("com.jakewharton:butterknife:$butterKnifeVersion")
-    compile files('libs/android-jain-sip-ri-1.2.258.jar')
+    compile ("javax.sip:android-jain-sip-ri:$jainSipVersion")
 }
