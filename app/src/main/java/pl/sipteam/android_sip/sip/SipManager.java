@@ -168,8 +168,12 @@ public class SipManager implements SipListener {
             request.setContent(message, contentTypeHeader);
 
             sipProvider.sendRequest(request);
-            SipMessageItem messageItem = new SipMessageItem(getUsername(), message, new DateTime());
-            bus.post(new SipMessageEvent(messageItem, SipMessageType.OUTCOMING_MESSAGE));
+            SipMessageItem messageItem = new SipMessageItem(getUsername(),
+                    getLocalIpAddress(true),
+                    message,
+                    new DateTime(),
+                    SipMessageType.OUTCOMING_MESSAGE);
+            bus.post(new SipMessageEvent(messageItem));
         } catch (Exception e) {
             String err;
             if (e instanceof IndexOutOfBoundsException) {
@@ -208,12 +212,20 @@ public class SipManager implements SipListener {
         }
 
         FromHeader from = (FromHeader) req.getHeader("From");
+        String address = from.getAddress().toString();
+        String name = "Anonymous";
+        try {
+            name = address.substring(1, address.indexOf("<") - 2);
+        } catch (IndexOutOfBoundsException e) {}
+
         SipMessageItem messageItem = new SipMessageItem(
-                from.getAddress().toString(),
+                name,
+                address,
                 new String(req.getRawContent()),
-                new DateTime()
+                new DateTime(),
+                SipMessageType.INCOMING_MESSAGE
         );
-        bus.post(new SipMessageEvent(messageItem, SipMessageType.INCOMING_MESSAGE));
+        bus.post(new SipMessageEvent(messageItem));
         Response response = null;
         try { //Reply with OK
             response = messageFactory.createResponse(200, req);

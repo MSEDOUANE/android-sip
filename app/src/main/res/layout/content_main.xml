@@ -11,7 +11,7 @@
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
     tools:context="pl.sipteam.android_sip.MainActivity"
     tools:showIn="@layout/activity_main">
-	
+
 
     <android.support.design.widget.TextInputLayout
         android:id="@+id/input_layout_address"
@@ -42,12 +42,22 @@
 
     </android.support.v7.widget.RecyclerView>
 
+    <CheckBox
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/tts"
+        android:id="@+id/tts_check_box"
+        android:layout_marginTop="5dp"
+        android:layout_below="@+id/messages_list"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
+
     <android.support.design.widget.TextInputLayout
         android:id="@+id/input_layout_message"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/messages_list"
-        android:layout_marginBottom="5dp">
+        android:layout_below="@id/tts_check_box"
+        android:layout_marginTop="5dp">
 
         <EditText
             android:id="@+id/input_message"

@@ -19,5 +19,6 @@
     <color name="blue">#0000FF</color>
     <color name="navy">#000080</color>
     <color name="black">#000000</color>
-    <color name="light_gray">#C7C7C7</color>
+    <color name="incoming_gray">#C7C7C7</color>
+    <color name="outcoming_gray">#E3E3E3</color>
 </resources>

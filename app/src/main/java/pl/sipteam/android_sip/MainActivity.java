@@ -7,7 +7,9 @@ import android.javax.sip.PeerUnavailableException;
 import android.javax.sip.TransportNotSupportedException;
 import android.media.MediaPlayer;
 import android.net.ConnectivityManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.speech.tts.TextToSpeech;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.TextInputLayout;
 import android.support.v7.app.AppCompatActivity;
@@ -21,11 +23,14 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.TooManyListenersException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -69,6 +74,11 @@ public class MainActivity extends AppCompatActivity {
     @Bind(R.id.messages_list)
     RecyclerView messagesList;
 
+    @Bind(R.id.tts_check_box)
+    CheckBox ttsCheckBox;
+
+    private TextToSpeech tts;
+
     private MessageListAdapter adapter;
 
     private EventBus bus;
@@ -81,6 +91,8 @@ public class MainActivity extends AppCompatActivity {
 
     private MediaPlayer mediaPlayer;
 
+    private Context context;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -89,8 +101,9 @@ public class MainActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         bus = EventBus.getDefault();
         mediaPlayer = MediaPlayer.create(this, R.raw.message_sound);
-                bus.register(this);
+        bus.register(this);
         executor = Executors.newFixedThreadPool(1);
+        context = this;
 
         try {
             sipManager = SipManager.getInstance("ja", 5060);
@@ -108,16 +121,39 @@ public class MainActivity extends AppCompatActivity {
 
         messages = new ArrayList<>();
         initializeMessagesList();
+        initializeTextToSpeach();
+
+        ttsCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean checked) {
+                if (checked) {
+                    mediaPlayer = MediaPlayer.create(context, R.raw.message_sound);
+                } else {
+                    mediaPlayer.stop();
+                    mediaPlayer.release();
+                }
+            }
+        });
     }
 
     private void initializeMessagesList() {
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
-        linearLayoutManager.setStackFromEnd(true);
         messagesList.setHasFixedSize(false);
         messagesList.setLayoutManager(linearLayoutManager);
         messagesList.setItemAnimator(new DefaultItemAnimator());
         adapter = new MessageListAdapter(messages);
         messagesList.setAdapter(adapter);
+    }
+
+    private void initializeTextToSpeach() {
+        tts = new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                if(status != TextToSpeech.ERROR) {
+                    tts.setLanguage(Locale.UK);
+                }
+            }
+        });
     }
 
     @OnClick(R.id.action_button)
@@ -131,7 +167,6 @@ public class MainActivity extends AppCompatActivity {
         } else {
             Toast.makeText(this, getString(R.string.no_internet), Toast.LENGTH_SHORT).show();
         }
-
     }
 
     private void sendMessage() {
@@ -173,15 +208,35 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void speak(SipMessageItem messageItem) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("New message from ");
+        sb.append(messageItem.getUser());
+        sb.append("...");
+        sb.append(messageItem.getMessage());
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            tts.speak(sb.toString(), TextToSpeech.QUEUE_ADD, null, Long.toString(System.currentTimeMillis()));
+        } else {
+            tts.speak(sb.toString(), TextToSpeech.QUEUE_ADD, null);
+        }
+    }
+
     @Subscribe(threadMode = ThreadMode.MainThread)
     public void onEventMainThread(SipMessageEvent event) {
-        messages.add(event.getMessageItem());
+        SipMessageItem messageItem = event.getMessageItem();
+        messages.add(messageItem);
         adapter.notifyItemInserted(messages.size() - 1);
+        messagesList.scrollToPosition(messages.size() - 1);
 
-        if (event.getMessageType() == SipMessageType.INCOMING_MESSAGE) {
-            mediaPlayer.start();
+        if (messageItem.getMessageType() == SipMessageType.INCOMING_MESSAGE) {
             Toast.makeText(this, getString(R.string.new_message), Toast.LENGTH_SHORT).show();
-        } else if (event.getMessageType() == SipMessageType.OUTCOMING_MESSAGE) {
+            if (ttsCheckBox.isChecked()) {
+                speak(messageItem);
+            } else {
+                mediaPlayer.start();
+            }
+        } else if (messageItem.getMessageType() == SipMessageType.OUTCOMING_MESSAGE) {
             Toast.makeText(this, getString(R.string.message_sent), Toast.LENGTH_SHORT).show();
         }
     }
@@ -216,7 +271,17 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         bus.unregister(this);
+        mediaPlayer.stop();
         super.onDestroy();
+    }
+
+    @Override
+    protected void onPause() {
+        if(tts !=null){
+            tts.stop();
+            tts.shutdown();
+        }
+        super.onPause();
     }
 
     public boolean isOnline() {
