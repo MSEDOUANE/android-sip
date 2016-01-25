@@ -10,4 +10,8 @@
     <string name="tts">Read messages</string>
     <string name="clear">Clear?</string>
     <string name="clear_text">Do you really want to clear messages history?</string>
+    <string name="user_name">Enter username</string>
+    <string name="user_name_hint">Username</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
 </resources>

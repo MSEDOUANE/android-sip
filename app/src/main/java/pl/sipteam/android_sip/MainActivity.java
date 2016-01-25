@@ -1,5 +1,6 @@
 package pl.sipteam.android_sip;
 
+import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.javax.sip.InvalidArgumentException;
@@ -25,6 +26,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
@@ -110,18 +112,10 @@ public class MainActivity extends AppCompatActivity {
         context = this;
         settings = new SettingsService(this);
 
-        try {
-            sipManager = SipManager.getInstance("ja", 5060);
-        } catch (PeerUnavailableException e) {
-            e.printStackTrace();
-        } catch (TransportNotSupportedException e) {
-            e.printStackTrace();
-        } catch (InvalidArgumentException e) {
-            e.printStackTrace();
-        } catch (ObjectInUseException e) {
-            e.printStackTrace();
-        } catch (TooManyListenersException e) {
-            e.printStackTrace();
+        if (settings.getUserName() == null) {
+            showSettingsDialog();
+        } else {
+            initializeSipStack();
         }
 
         messages = settings.getMessages();
@@ -139,6 +133,22 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    private void initializeSipStack() {
+        try {
+            sipManager = SipManager.getInstance(settings.getUserName(), 5060);
+        } catch (PeerUnavailableException e) {
+            e.printStackTrace();
+        } catch (TransportNotSupportedException e) {
+            e.printStackTrace();
+        } catch (InvalidArgumentException e) {
+            e.printStackTrace();
+        } catch (ObjectInUseException e) {
+            e.printStackTrace();
+        } catch (TooManyListenersException e) {
+            e.printStackTrace();
+        }
     }
 
     private void initializeMessagesList() {
@@ -164,6 +174,12 @@ public class MainActivity extends AppCompatActivity {
     @OnClick(R.id.action_button)
     public void onActionButtonClick() {
         clearErrors();
+
+        if (sipManager == null) {
+            showSettingsDialog();
+            return;
+        }
+
         if (isOnline()) {
             if (validateFields()) {
                 sendMessage();
@@ -244,7 +260,7 @@ public class MainActivity extends AppCompatActivity {
         StringBuilder sb = new StringBuilder();
         sb.append("New message from ");
         sb.append(messageItem.getUser());
-        sb.append("...");
+        sb.append("..");
         sb.append(messageItem.getMessage());
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -296,9 +312,39 @@ public class MainActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
         if (id == R.id.action_settings) {
+            showSettingsDialog();
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void showSettingsDialog() {
+        final Dialog dialog = new Dialog(context);
+        dialog.setContentView(R.layout.settings_dialog);
+        dialog.setTitle(getString(R.string.user_name));
+        final EditText username = (EditText) dialog.findViewById(R.id.username);
+        Button save = (Button) dialog.findViewById(R.id.save);
+        Button cancel = (Button) dialog.findViewById(R.id.cancel);
+        if (settings.getUserName() != null) {
+            username.setText(settings.getUserName());
+        }
+        save.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (!TextUtils.isEmpty(username.getText().toString())) {
+                    settings.setUserName(username.getText().toString());
+                    initializeSipStack();
+                    dialog.dismiss();
+                }
+            }
+        });
+        cancel.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v) {
+                dialog.dismiss();
+            }
+        });
+        dialog.show();
     }
 
     @Override

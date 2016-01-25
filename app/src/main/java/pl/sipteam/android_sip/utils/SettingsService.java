@@ -28,7 +28,7 @@ public class SettingsService {
     }
 
     public void setUserName(String userName) {
-        preferences.edit().putString(USER_KEY, userName);
+        preferences.edit().putString(USER_KEY, userName).commit();
     }
 
     public String getUserName() {
