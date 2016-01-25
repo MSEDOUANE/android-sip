@@ -92,7 +92,7 @@ public class MessageListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
 
         public void populateView(SipMessageItem messageItem) {
             user.setText(messageItem.getUser() + ",");
-            date.setReferenceTime(messageItem.getDate().getMillis());
+            date.setReferenceTime(messageItem.getDate());
             content.setText(messageItem.getMessage());
         }
     }
@@ -115,7 +115,7 @@ public class MessageListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
 
         public void populateView(SipMessageItem messageItem) {
             user.setText(messageItem.getUser() + ",");
-            date.setReferenceTime(messageItem.getDate().getMillis());
+            date.setReferenceTime(messageItem.getDate());
             content.setText(messageItem.getMessage());
         }
     }

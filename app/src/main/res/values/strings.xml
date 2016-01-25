@@ -8,4 +8,6 @@
     <string name="new_message">New message</string>
     <string name="no_internet">No internet connection</string>
     <string name="tts">Read messages</string>
+    <string name="clear">Clear?</string>
+    <string name="clear_text">Do you really want to clear messages history?</string>
 </resources>

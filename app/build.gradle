@@ -38,4 +38,6 @@ dependencies {
     compile ("net.danlew:android.joda:$jodaTimeVersion")
 
     compile ("com.github.curioustechizen.android-ago:library:$androidAgoVersion")
+
+    compile ("com.google.code.gson:gson:$gsonVersion")
 }

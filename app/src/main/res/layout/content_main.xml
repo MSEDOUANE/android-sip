@@ -72,5 +72,14 @@
 
     </android.support.design.widget.TextInputLayout>
 
+    <ImageView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/clear"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        android:layout_above="@+id/input_layout_message"
+        android:layout_alignRight="@+id/input_layout_message"
+        android:layout_alignEnd="@+id/input_layout_message" />
+
 
 </RelativeLayout>

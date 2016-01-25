@@ -1,6 +1,7 @@
 package pl.sipteam.android_sip;
 
 import android.content.Context;
+import android.content.DialogInterface;
 import android.javax.sip.InvalidArgumentException;
 import android.javax.sip.ObjectInUseException;
 import android.javax.sip.PeerUnavailableException;
@@ -12,6 +13,7 @@ import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.TextInputLayout;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
@@ -28,7 +30,6 @@ import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.TooManyListenersException;
@@ -49,6 +50,7 @@ import pl.sipteam.android_sip.model.SipMessageItem;
 import pl.sipteam.android_sip.model.SipMessageType;
 import pl.sipteam.android_sip.runnable.SendMessageRunnable;
 import pl.sipteam.android_sip.sip.SipManager;
+import pl.sipteam.android_sip.utils.SettingsService;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = MainActivity.class.getSimpleName();
@@ -93,6 +95,8 @@ public class MainActivity extends AppCompatActivity {
 
     private Context context;
 
+    private SettingsService settings;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -104,6 +108,7 @@ public class MainActivity extends AppCompatActivity {
         bus.register(this);
         executor = Executors.newFixedThreadPool(1);
         context = this;
+        settings = new SettingsService(this);
 
         try {
             sipManager = SipManager.getInstance("ja", 5060);
@@ -119,7 +124,7 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-        messages = new ArrayList<>();
+        messages = settings.getMessages();
         initializeMessagesList();
         initializeTextToSpeach();
 
@@ -167,6 +172,33 @@ public class MainActivity extends AppCompatActivity {
         } else {
             Toast.makeText(this, getString(R.string.no_internet), Toast.LENGTH_SHORT).show();
         }
+    }
+
+    @OnClick(R.id.clear)
+    public void onClearButtonClick() {
+        if (messages.size() > 0) {
+            showClearDialog();
+        }
+    }
+
+    private void showClearDialog() {
+        new AlertDialog.Builder(context)
+                .setTitle(getString(R.string.clear))
+                .setMessage(getString(R.string.clear_text))
+                .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        messages.clear();
+                        adapter.notifyDataSetChanged();
+                        settings.setMessages(messages);
+                    }
+                })
+                .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        // do nothing
+                    }
+                })
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .show();
     }
 
     private void sendMessage() {
@@ -226,6 +258,7 @@ public class MainActivity extends AppCompatActivity {
     public void onEventMainThread(SipMessageEvent event) {
         SipMessageItem messageItem = event.getMessageItem();
         messages.add(messageItem);
+        settings.setMessages(messages);
         adapter.notifyItemInserted(messages.size() - 1);
         messagesList.scrollToPosition(messages.size() - 1);
 
@@ -271,7 +304,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         bus.unregister(this);
-        mediaPlayer.stop();
+        if (mediaPlayer != null) {
+            mediaPlayer.release();
+        }
         super.onDestroy();
     }
 

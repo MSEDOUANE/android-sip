@@ -171,7 +171,7 @@ public class SipManager implements SipListener {
             SipMessageItem messageItem = new SipMessageItem(getUsername(),
                     getLocalIpAddress(true),
                     message,
-                    new DateTime(),
+                    new DateTime().getMillis(),
                     SipMessageType.OUTCOMING_MESSAGE);
             bus.post(new SipMessageEvent(messageItem));
         } catch (Exception e) {
@@ -222,7 +222,7 @@ public class SipManager implements SipListener {
                 name,
                 address,
                 new String(req.getRawContent()),
-                new DateTime(),
+                new DateTime().getMillis(),
                 SipMessageType.INCOMING_MESSAGE
         );
         bus.post(new SipMessageEvent(messageItem));

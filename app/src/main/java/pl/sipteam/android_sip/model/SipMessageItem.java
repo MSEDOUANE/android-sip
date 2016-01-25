@@ -1,17 +1,15 @@
 package pl.sipteam.android_sip.model;
 
-import org.joda.time.DateTime;
-
 import java.io.Serializable;
 
 public class SipMessageItem implements Serializable {
     private String user;
     private String address;
     private String message;
-    private DateTime date;
+    private long date;
     private SipMessageType messageType;
 
-    public SipMessageItem(String user, String address, String message, DateTime date, SipMessageType messageType) {
+    public SipMessageItem(String user, String address, String message, long date, SipMessageType messageType) {
         this.user = user;
         this.address = address;
         this.message = message;
@@ -31,7 +29,7 @@ public class SipMessageItem implements Serializable {
         return message;
     }
 
-    public DateTime getDate() {
+    public long getDate() {
         return date;
     }
 
